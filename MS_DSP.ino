@@ -1,24 +1,63 @@
 int result;
-int intomingByte = 0;
+int incomingByte = 0;
 int MAX_WAIT = 1000;
 unsigned long starttime;
-byte Data_In[39];
+int Data_In[99];
+byte Data_In_Bytes[99];
 int thermfactor[255];
+int serialrate=9600;
+String signature; // = "MS1/Extra format 029y3 *********";
 
 
-// intlude the LCD library code:
+// include the LCD library code:
 #include <LiquidCrystal.h>
-
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2); // initialize the LCD-library with the numbers of the interface pins
 
 void setup() {
-    Serial.begin(9600); // opens serial port, sets data rate to 9600 bps
-    lcd.begin(16, 2); // Set the LCD as 16x2
+    int x=0;
+    
+    lcd.begin(16, 2); // Set the LCD as 
+    
+    lcd.print("Init MS_DSP");  // Display Init message
+    lcd.setCursor(0,1);  // Set position for 10 sec counter
+    for(int n=10; n>0; n--)  // Counter loop
+    {
+      lcd.print(n);
+      delay(1000);
+      lcd.setCursor(0,1);
+    }
+      
+    Serial.begin(serialrate); // opens serial port, sets data rate to "serialrate" bps
+    
+    do
+    {
+    Serial.print("S"); // Send command to read signature
+    lcd.setCursor(0,0);
+    delay(200); //Wait for answer
+    result = GetSerialData(32);
+    if (result = 1)
+    {
+      for (int i=0;i<32;i++)
+      {
+        signature=signature+Data_In[i];
+      }
+      lcd.print(signature);
+    }
+    else
+    {
+      x++;
+      lcd.setCursor(0,0);
+      lcd.print("Can't connect: try "+x);
+    }
+    }while (result = 0);
+    
+    
+    
 }
 
 void loop(){
   Serial.print("R"); // Send command to read realtime values (output 39 bytes)
-  result = GetSerialData();
+  result = GetSerialData(39);
   if(result=1) // Hop to function to get the 39 bytes of data
   {
     CalcData(); // Hop to function to calculate the received bytes
@@ -31,18 +70,18 @@ void loop(){
   delay(200); // Add a 200ms delay to prevent MS to stress
 }
 
-int GetSerialData(){
+int GetSerialData(int nbrbytes){
     starttime = millis(); 
   
   // Start loop to get the 39 bytes
-  while ( (Serial.available()<39) && ((millis() - starttime) < MAX_WAIT) )
+  while ( (Serial.available()<nbrbytes) && ((millis() - starttime) < MAX_WAIT) )
   {
     // Just looping until we have all data
   }
   
   // Verify if we have received 39 bytes
   
-  if(Serial.available() < 39)
+  if(Serial.available() < nbrbytes)
   {
     // Less bytes received then expected -> write error on screen
     lcd.setCursor(0,0);
@@ -56,7 +95,7 @@ int GetSerialData(){
   {
     // We received all data - woop woop
     // Read out received data and insert in Array
-    for(int n=0; n<39; n++)
+    for(int n=0; n<nbrbytes; n++)
     {
       Data_In_Bytes[n] = Serial.read();
       Data_In[n] = int(Data_In_Bytes[n]);
@@ -99,7 +138,6 @@ void CalcData()
   // byte 6 - cltADC
   int cltADC = THERMFACTOR(Data_In[6]);
  
-  
   // byte 7 - tpsADC
   int tpsADC = Data_In[7];
   
@@ -198,4 +236,9 @@ void CalcData()
 int THERMFACTOR(int val){
   int thermfactor[] = {99999, 366.10, 299.25, 265.32, 243.19, 227.03, 214.42, 204.15, 195.53, 188.11, 181.64, 175.89, 170.74, 166.08, 161.82, 157.91, 154.29, 150.93, 147.80, 144.86, 142.10, 139.49, 137.02, 134.67, 132.45, 130.32, 128.29, 126.34, 124.48, 122.69, 120.97, 119.30, 117.70, 116.16, 114.66, 113.21, 111.81, 110.44, 109.12, 107.84, 106.59, 105.37, 104.18, 103.03, 101.90, 100.80, 99.72, 98.67, 97.64, 96.63, 95.65, 94.68, 93.74, 92.81, 91.90, 91.00, 90.13, 89.27, 88.42, 87.59, 86.77, 85.96, 85.17, 84.39, 83.62, 82.86, 82.11, 81.38, 80.65, 79.94, 79.23, 78.53, 77.84, 77.16, 76.49, 75.83, 75.17, 74.53, 73.89, 73.25, 72.63, 72.01, 71.40, 70.79, 70.19, 69.59, 69.00, 68.42, 67.84, 67.27, 66.70, 66.14, 65.58, 65.03, 64.48, 63.94, 63.40, 62.86, 62.33, 61.80, 61.28, 60.76, 60.24, 59.73, 59.22, 58.72, 58.21, 57.71, 57.22, 56.72, 56.23, 55.74, 55.26, 54.78, 54.30, 53.82, 53.34, 52.87, 52.40, 51.93, 51.47, 51.00, 50.54, 50.08, 49.62, 49.16, 48.71, 48.26, 47.80, 47.35, 46.91, 46.46, 46.01, 45.57, 45.13, 44.68, 44.24, 43.80, 43.36, 42.93, 42.49, 42.05, 41.62, 41.18, 40.75, 40.32, 39.88, 39.45, 39.02, 38.59, 38.16, 37.73, 37.30, 36.87, 36.44, 36.01, 35.58, 35.15, 34.72, 34.29, 33.87, 33.44, 33.01, 32.58, 32.15, 31.71, 31.28, 30.85, 30.42, 29.99, 29.55, 29.12, 28.68, 28.24, 27.81, 27.37, 26.93, 26.49, 26.05, 25.60, 25.16, 24.71, 24.26, 23.81, 23.36, 22.91, 22.46, 22.00, 21.54, 21.08, 20.61, 20.15, 19.68, 19.21, 18.74, 18.26, 17.78, 17.30, 16.81, 16.32, 15.83, 15.33, 14.83, 14.33, 13.82, 13.30, 12.79, 12.26, 11.73, 11.20, 10.66, 10.12, 9.57, 9.01, 8.45, 7.88, 7.30, 6.72, 6.12, 5.52, 4.91, 4.29, 3.66, 3.02, 2.37, 1.71, 1.03, .34, -.36, -1.08, -1.81, -2.56, -3.33, -4.12, -4.93, -5.76, -6.62, -7.50, -8.42, -9.36, -10.35, -11.37, -12.44, -13.55, -14.73, -15.97, -17.28, -18.67, -20.18, -21.80, -23.57, -25.54, -27.76, -30.32, -33.39, 99999};
   return thermfactor[val];
+}
+
+int MAPFACTOR(int val){
+  int mapfactor[] = {1, 2};
+  return mapfactor[val];
 }
