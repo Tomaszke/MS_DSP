@@ -1,0 +1,8 @@
+- RPM ( rpm )ok
+- AFR ( afrTarget )
+- IAT ( matADC )
+- MAP ( mapADC )
+- BattV ( batADC )ok
+- CHT ( egtADC )ok
+- CLT ( cltADC ) ok
+- SparkAdv ( advSpark )ok
